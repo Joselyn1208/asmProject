@@ -1,11 +1,15 @@
 section .data
+    SYS_exit equ 60 
+    LF equ 10  
+    NULL equ 0 
+    newline db LF, NULL
     matrix_file db "matrix.txt", 0
     buffer times 256 db 0
     menu db "1. Euclidean Distancia", 10, "2. Manhattan Distancia", 10, "3. Mahalanobis Distancia", 10, "Elige: ", 0
-    user_input db 0 ; stores the user's input
-    enter_data_msg db "Escribe los datos de la matriz (5x5):", 0
+    user_input db 0 
+    enter_data_msg db "Escribe los datos de la matriz (5x5):", 10, 0
     enter_data_msg_len equ $-enter_data_msg
-    error_msg db "Invalid input. Please try again.", 0
+    error_msg db "Invalid input. Please try again.", 10, 0
     error_msg_len equ $-error_msg
 
 section .bss
@@ -13,204 +17,221 @@ section .bss
 
 section .text
     global _start
+    _start:
+        ; Abrir el archivo en modo lectura
+        mov eax, 2 
+        mov edi, matrix_file 
+        xor esi, esi 
+        xor edx, edx 
+        syscall 
 
-_start:
-    ; Open file to write
-    mov eax, 2 ; syscall number for open
-    mov edi, matrix_file ; pointer to file name
-    xor esi, esi ; file mode (0 is read-only)
-    xor edx, edx ; permissions (not used for read-only)
-    syscall ; call kernel
+        ; Guardar el file descriptor
+        mov ebx, eax
 
-    ; Save file descriptor
-    mov ebx, eax
+        ; Imprimir el mensaje para ingresar los datos
+        mov eax, 1
+        mov edi, 1 
+        mov esi, enter_data_msg 
+        mov edx, enter_data_msg_len 
+        syscall 
 
-    ; Print enter data message
-    mov eax, 4 ; syscall number for write
-    mov edi, 1 ; file descriptor 1 is stdout
-    mov esi, enter_data_msg ; pointer to message
-    mov edx, enter_data_msg_len ; message length
-    syscall ; call kernel
+        ; Bucle para obtener la entrada del usuario y escribir en el archivo
+        mov ecx, matrix 
+        mov edx, 25 
+        call read_matrix_input
 
-    ; Loop to get user input and write to file
-    mov ecx, matrix ; pointer to matrix buffer
-    mov edx, 25 ; number of bytes to read
-    call read_matrix_input
+        ; Escribir la matriz en el archivo
+        mov eax, 1 
+        mov edi, ebx 
+        mov esi, matrix 
+        mov edx, 25 
+        syscall 
 
-    ; Write matrix to file
-    mov eax, 1 ; syscall number for write
-    mov edi, ebx ; file descriptor
-    mov esi, matrix ; pointer to matrix buffer
-    mov edx, 25 ; number of bytes to write
-    syscall ; call kernel
+        ; Cerrar el archivo
+        mov eax, 3 
+        mov edi, ebx 
+        syscall 
 
-    ; Close file
-    mov eax, 3 ; syscall number for close
-    mov edi, ebx ; file descriptor
-    syscall ; call kernel
+        ; Imprimir el menú y obtener la elección del usuario
+        call print_menu
+        call get_user_input
 
-    ; Print menu and get user choice
-    call print_menu
-    call get_user_input
+        ; En función de la entrada del usuario, calcular e imprimir la distancia correspondiente
+        cmp byte [user_input], '1'
+        je calculate_euclidean_distance
 
-    ; based on user input, calculate and print the corresponding distance
-    cmp al, '1'
-    je calculate_euclidean_distance
+        cmp byte [user_input], '2'
+        je calculate_manhattan_distance
 
-    cmp al, '2'
-    je calculate_manhattan_distance
+        cmp byte [user_input], '3'
+        je calculate_mahalanobis_distance
 
-    cmp al, '3'
-    je calculate_mahalanobis_distance
+        ; Si no se selecciona ninguna opción válida, imprimir el mensaje de error y salir
+        jmp exit
 
-    ; if none of the above, print error message and exit
-    jmp exit
+    ; Done, terminate program.
+    exit:
+        mov eax, SYS_exit 
+        xor edi, edi 
+        syscall 
 
-calculate_euclidean_distance:
-    ; read matrix from file
-    mov eax, 2 ; syscall number for open
-    mov edi, matrix_file ; pointer to file name
-    xor esi, esi ; file mode (0 is read-only)
-    xor edx, edx ; permissions (not used for read-only)
-    syscall ; call kernel
+    calculate_euclidean_distance:
+        mov ecx, matrix
+        mov edx, 25
+        call calculate_sum_of_squares
+        ; ax ahora contiene la suma de los cuadrados de las distancias
+        jmp exit
 
-    ; Save file descriptor
-    mov ebx, eax
+    calculate_manhattan_distance:
+        mov ecx, matrix
+        mov edx, 25
+        call calculate_sum_of_absolute_differences
+        ; ax ahora contiene la suma de las diferencias absolutas
+        jmp exit
 
-    ; Read matrix data
-    mov eax, 0 ; syscall number for read
-    mov edi, ebx ; file descriptor
-    mov esi, matrix ; pointer to matrix buffer
-    mov edx, 25 ; number of bytes to read
-    syscall ; call kernel
+    calculate_mahalanobis_distance:
+        jmp exit
 
-    ; Calculate Euclidean distance
-    ; Implement your Euclidean distance calculation logic here
-
-    ; Close file
-    mov eax, 3 ; syscall number for close
-    mov edi, ebx ; file descriptor
-    syscall ; call kernel
-
-    jmp exit
-
-calculate_manhattan_distance:
-    ; read matrix from file
-    mov eax, 2 ; syscall number for open
-    mov edi, matrix_file ; pointer to file name
-    xor esi, esi ; file mode (0 is read-only)
-    xor edx, edx ; permissions (not used for read-only)
-    syscall ; call kernel
-
-    ; Save file descriptor
-    mov ebx, eax
-
-    ; Read matrix data
-    mov eax, 0 ; syscall number for read
-    mov edi, ebx ; file descriptor
-    mov esi, matrix ; pointer to matrix buffer
-    mov edx, 25 ; number of bytes to read
-    syscall ; call kernel
-
-    ; Calculate Manhattan distance
-    ; Implement your Manhattan distance calculation logic here
-
-    ; Close file
-    mov eax, 3 ; syscall number for close
-    mov edi, ebx ; file descriptor
-    syscall ; call kernel
-
-    jmp exit
-
-calculate_mahalanobis_distance:
-    ; read matrix from file
-    mov eax, 2 ; syscall number for open
-    mov edi, matrix_file ; pointer to file name
-    xor esi, esi ; file mode (0 is read-only)
-    xor edx, edx ; permissions (not used for read-only)
-    syscall ; call kernel
-
-    ; Save file descriptor
-    mov ebx, eax
-
-    ; Read matrix data
-    mov eax, 0 ; syscall number for read
-    mov edi, ebx ; file descriptor
-    mov esi, matrix ; pointer to matrix buffer
-    mov edx, 25 ; number of bytes to read
-    syscall ; call kernel
-
-    ; Calculate Mahalanobis distance
-    ; Implement your Mahalanobis distance calculation logic here
-
-    ; Close file
-    mov eax, 3 ; syscall number for close
-    mov edi, ebx ; file descriptor
-    syscall ; call kernel
-
-    jmp exit
-
-exit:
-    ; exit program
-    mov eax, 1 ; syscall number for exit
-    xor ebx, ebx ; exit code
-    syscall ; call kernel
-
-; Function to read matrix input from user
-read_matrix_input:
-    pushad ; save registers
-
-    mov esi, ecx ; pointer to matrix buffer
-    mov ecx, edx ; number of bytes to read
-    xor eax, eax ; set eax to 0
+    ; Función para leer la entrada de la matriz del usuario
+    read_matrix_input:
+        push ebx 
+        mov esi, ecx 
+        mov ecx, edx 
+        xor eax, eax 
 
     read_loop:
-        mov ebx, 0 ; file descriptor 0 is stdin
-        mov edx, 1 ; read only one byte
-        syscall ; call kernel
+        ; leer primer dígito
+        mov edi, 0 
+        mov edx, 1 
+        mov eax, 3 
+        syscall 
 
-        ; check for valid input (digits only)
+        ; revisar si es un dígito válido
         cmp al, '0'
         jb read_error
         cmp al, '9'
-        ja read_error
+        ja check_space
 
-        ; store digit in matrix buffer
-        stosb
+        ; convertir el primer dígito a número y almacenarlo en bl
+        sub al, '0'
+        mov bl, al
 
-        ; check if all bytes have been read
-        loop read_loop
+        ; leer siguiente carácter
+        mov edi, 0 
+        mov edx, 1 
+        mov eax, 3 
+        syscall 
 
-    popad ; restore registers
-    ret
+        ; revisar si es un dígito válido
+        cmp al, '0'
+        jb store_single_digit
+        cmp al, '9'
+        ja store_single_digit
 
-; Function to print menu
-print_menu:
-    mov eax, 4 ; syscall number for write
-    mov ebx, 1 ; file descriptor 1 is stdout
-    mov ecx, menu ; pointer to message
-    mov edx, 79 ; message length
-    syscall ; call kernel
-    ret
+        ; si es un dígito válido, multiplicar bl por 10 y sumar el segundo dígito
+        sub al, '0'
+        imul bl, 10
+        add bl, al
 
-; Function to get user input
-get_user_input:
-    mov eax, 3 ; syscall number for read
-    mov ebx, 0 ; file descriptor 0 is stdin
-    mov ecx, user_input ; pointer to buffer
-    mov edx, 1 ; read only one byte
-    syscall ; call kernel
-    ret
+        ; leer siguiente carácter
+        mov edi, 0 
+        mov edx, 1 
+        mov eax, 3 
+        syscall 
 
-; Function to print error message
-print_error_message:
-    mov eax, 4 ; syscall number for write
-    mov ebx, 1 ; file descriptor 1 is stdout
-    mov ecx, error_msg ; pointer to message
-    mov edx, error_msg_len ; message length
-    syscall ; call kernel
-    ret
+    store_single_digit:
+        ; almacenar el número en la matriz
+        mov [esi], bl
+        inc esi
 
-read_error:
-    call print_error_message
-    jmp read_loop
+        ; comprobar si el carácter actual es un espacio o nueva línea
+        cmp al, ' '
+        je read_loop
+        cmp al, 10 ; ascii code for newline
+        je read_loop
+
+        jmp read_error
+
+    check_space:
+        cmp al, ' '
+        je read_loop
+        cmp al, 10 ; ascii code for newline
+        je read_loop
+
+        jmp read_error
+
+
+    read_error:
+        mov eax, 1 
+        mov edi, 1 
+        mov esi, error_msg 
+        mov edx, error_msg_len 
+        syscall 
+        jmp exit
+
+    ; Función para imprimir el menú
+    print_menu:
+        mov eax, 1 
+        mov edi, 1 
+        mov esi, menu 
+        mov edx, 32 
+        syscall 
+        ret
+
+    ; Función para obtener la entrada del usuario
+    get_user_input:
+        mov eax, 0 
+        mov edi, 0 
+        mov esi, user_input 
+        mov edx, 1 
+        syscall 
+        ret
+
+    calculate_sum_of_squares:
+        xor eax, eax 
+        xor ebx, ebx 
+        xor edx, edx
+        xor esi, esi
+
+    loop_calc_sum_of_squares:
+        cmp edx, 25
+        je end_calc_sum_of_squares
+        mov al, byte [ecx+edx]
+        inc edx
+        mov bl, byte [ecx+edx]
+        sub al, bl
+        imul ax, ax
+        add esi, ax
+        jmp loop_calc_sum_of_squares
+
+    end_calc_sum_of_squares:
+        mov ax, si
+        ret
+
+    calculate_sum_of_absolute_differences:
+        xor eax, eax 
+        xor ebx, ebx 
+        xor edx, edx
+        xor esi, esi
+
+    loop_calc_sum_of_absolute_differences:
+        cmp edx, 25
+        je end_calc_sum_of_absolute_differences
+        mov al, byte [ecx+edx]
+        inc edx
+        mov bl, byte [ecx+edx]
+        sub al, bl
+        call calc_absolute
+        add esi, eax
+        jmp loop_calc_sum_of_absolute_differences
+
+    end_calc_sum_of_absolute_differences:
+        mov ax, si
+        ret
+
+    calc_absolute:
+        cmp eax, 0
+        jge end_abs
+        neg eax
+    end_abs:
+        ret
