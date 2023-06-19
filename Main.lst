@@ -1,0 +1,124 @@
+     1                                 %line 1+1 Main.asm
+     2                                 [section .data]
+     3 00000000 6D61747269782E7478-     matrix_file db "matrix.txt", 0
+     4 00000000 7400               
+     5 0000000B 00<rept>                buffer times 256 db 0
+     6 0000010B 312E204575636C6964-     menu db "1. Euclidean Distancia", 10, "2. Manhattan Distancia", 10, "3. Mahalanobis Distancia", 10, "Elige: ", 0
+     7 0000010B 65616E204469737461-
+     8 0000010B 6E6369610A322E204D-
+     9 0000010B 616E68617474616E20-
+    10 0000010B 44697374616E636961-
+    11 0000010B 0A332E204D6168616C-
+    12 0000010B 616E6F626973204469-
+    13 0000010B 7374616E6369610A45-
+    14 0000010B 6C6967653A2000     
+    15 0000015A 00                      user_input db 0
+    16 0000015B 456E746572206D6174-     enter_data_msg db "Enter matrix data: ", 0
+    17 0000015B 72697820646174613A-
+    18 0000015B 2000               
+    19                                  enter_data_msg_len equ $-enter_data_msg
+    20                                 
+    21                                 [section .text]
+    22                                 [global _start]
+    23                                 
+    24                                 _start:
+    25                                 
+    26 00000000 B805000000              mov eax, 5
+    27 00000005 BB[00000000]            mov ebx, matrix_file
+    28 0000000A B902000000              mov ecx, 2
+    29 0000000F CD80                    int 0x80
+    30                                 
+    31                                 
+    32 00000011 89C6                    mov esi, eax
+    33                                 
+    34                                 
+    35                                 get_data:
+    36                                 
+    37 00000013 B804000000              mov eax, 4
+    38 00000018 BB01000000              mov ebx, 1
+    39 0000001D B9[00000000]            mov ecx, enter_data_msg
+    40 00000022 BA14000000              mov edx, enter_data_msg_len
+    41 00000027 CD80                    int 0x80
+    42                                 
+    43                                 
+    44 00000029 B803000000              mov eax, 3
+    45 0000002E BB00000000              mov ebx, 0
+    46 00000033 B9[00000000]            mov ecx, buffer
+    47 00000038 BA00010000              mov edx, 256
+    48 0000003D CD80                    int 0x80
+    49                                 
+    50                                 
+    51 0000003F B804000000              mov eax, 4
+    52 00000044 89F3                    mov ebx, esi
+    53 00000046 B9[00000000]            mov ecx, buffer
+    54 0000004B BA00010000              mov edx, 256
+    55 00000050 CD80                    int 0x80
+    56                                 
+    57                                 
+    58 00000052 83F802                  cmp eax, 2
+    59 00000055 7DBA                    jge get_data
+    60                                 
+    61                                 
+    62 00000057 B806000000              mov eax, 6
+    63 0000005C 89F3                    mov ebx, esi
+    64 0000005E CD80                    int 0x80
+    65                                 
+    66                                 
+    67 00000060 B804000000              mov eax, 4
+    68 00000065 BB01000000              mov ebx, 1
+    69 0000006A B9[00000000]            mov ecx, buffer
+    70 0000006F BA00010000              mov edx, 256
+    71 00000074 CD80                    int 0x80
+    72                                 
+    73                                 
+    74 00000076 E81D000000              call print_menu
+    75 0000007B E82F000000              call get_user_input
+    76                                 
+    77                                 
+    78 00000080 3C31                    cmp al, '1'
+    79 00000082 7408                    je calculate_euclidean_distance
+    80                                 
+    81 00000084 3C32                    cmp al, '2'
+    82 00000086 7406                    je calculate_manhattan_distance
+    83                                 
+    84 00000088 3C33                    cmp al, '3'
+    85 0000008A 7404                    je calculate_mahalanobis_distance
+    86                                 
+    87                                 
+    88 0000008C EB04                    jmp exit
+    89                                 
+    90                                 calculate_euclidean_distance:
+    91                                 
+    92 0000008E EB02                    jmp exit
+    93                                 
+    94                                 calculate_manhattan_distance:
+    95                                 
+    96 00000090 EB00                    jmp exit
+    97                                 
+    98                                 calculate_mahalanobis_distance:
+    99                                 
+   100 00000092 EBFE                    jmp exit
+   101                                 
+   102                                 exit:
+   103                                 
+   104 00000094 B801000000              mov eax, 1
+   105 00000099 31DB                    xor ebx, ebx
+   106 0000009B CD80                    int 0x80
+   107                                 
+   108                                 [global print_menu]
+   109                                 print_menu:
+   110 0000009D B804000000              mov eax, 4
+   111 000000A2 BB01000000              mov ebx, 1
+   112 000000A7 B9[00000000]            mov ecx, menu
+   113 000000AC BA4F000000              mov edx, 79
+   114 000000B1 CD80                    int 0x80
+   115 000000B3 C3                      ret
+   116                                 
+   117                                 [global get_user_input]
+   118                                 get_user_input:
+   119 000000B4 B803000000              mov eax, 3
+   120 000000B9 BB00000000              mov ebx, 0
+   121 000000BE B9[00000000]            mov ecx, user_input
+   122 000000C3 BA01000000              mov edx, 1
+   123 000000C8 CD80                    int 0x80
+   124 000000CA C3                      ret
